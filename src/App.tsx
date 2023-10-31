@@ -1,4 +1,4 @@
-import { useEffect, ChangeEvent, useReducer, useCallback } from 'react'
+import { useEffect, ChangeEvent, useReducer, useCallback, useState } from 'react'
 import './App.css'
 import { useSearchField } from './customHooks/useSearchField';
 import CustomInput from './components/CustomInput';
@@ -32,16 +32,20 @@ export type TonRemoveItem = (item: Story) => void;
 //   )
 
 function App() {
-  const [searchText, setsearchText] = useSearchField('searchField', '');
   // const [stories, setstories] = useState<Story[]>([]);
   const [stories, dispatchStories] = useReducer(storiesReducer, { data: [], isLoading: false, isError: false });
+  const [searchText, setsearchText] = useSearchField('searchField', '');
+
+  const [url, setUrl] = useState(
+    `${API_ENDPOINT}${searchText}`
+  );
 
   const handleFetchStories = useCallback(() => {
-    if (!searchText) return;
+    // if (!searchText) return;
 
     dispatchStories({ type: 'STORIES_FETCH_INIT' });
 
-    fetch(`${API_ENDPOINT}${searchText}`)
+    fetch(url)
       .then((response) => response.json())
       .then((result) => {
         dispatchStories({
@@ -49,7 +53,7 @@ function App() {
           payload: result.hits,
         })
       });
-  }, [searchText])
+  }, [url])
 
   useEffect(() => {
     handleFetchStories();
@@ -63,16 +67,23 @@ function App() {
   }
 
 
-  const changeSearchState = (event: ChangeEvent<HTMLInputElement>) => {
-    setsearchText(event.target.value)
-  }
+  const handleSearchInput = (event: ChangeEvent<HTMLInputElement>) => {
+    setsearchText(event.target.value);
+  };
+  
+  const handleSearchSubmit = () => {
+    setUrl(`${API_ENDPOINT}${searchText}`);
+  };
+
+
 
 
   return (
     <>
-      <CustomInput id="searchField" type="text" value={searchText} isFocused={true} changeSearchState={changeSearchState}>
+      <CustomInput id="searchField" type="text" value={searchText} isFocused={true} changeSearchState={handleSearchInput}>
         <strong>Type something:</strong>
       </CustomInput>
+      <button type="button" disabled={!searchText} onClick={handleSearchSubmit}>Submit</button>
       <p>
         <strong>Search Field value is: {searchText}</strong>
       </p>
