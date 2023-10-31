@@ -1,4 +1,4 @@
-import { useState, useEffect, ChangeEvent, useReducer } from 'react'
+import { useEffect, ChangeEvent, useReducer } from 'react'
 import './App.css'
 import { useSearchField } from './customHooks/useSearchField';
 import CustomInput from './components/CustomInput';
@@ -12,6 +12,12 @@ export type Story = {
   num_comments: number;
   points: number;
   objectID: number;
+}
+
+export type StoriesState = {
+  isLoading: boolean;
+  isError: boolean;
+  data: Story[];
 }
 
 export type TonRemoveItem = (item: Story) => void;
@@ -55,22 +61,21 @@ const getAsyncStories = (): Promise<{ data: { stories: Story[] } }> =>
 function App() {
   const [searchText, setsearchText] = useSearchField('searchField', '');
   // const [stories, setstories] = useState<Story[]>([]);
-  const [stories, dispatchStories] = useReducer(storiesReducer, []);
-  const [isLoading, setisLoading] = useState(false);
-  const [isError, setisError] = useState(false);
+  const [stories, dispatchStories] = useReducer(storiesReducer, { data: [], isLoading: false, isError: false });
 
   useEffect(() => {
-    setisLoading(true);
+    dispatchStories({ type: 'STORIES_FETCH_INIT' });
 
     getAsyncStories()
-      .then(res => {
-        // setstories(res.data.stories);
-        dispatchStories({ type: 'SET_STORIES', payload: res.data.stories });
-        setisLoading(false);
-      }).catch((error) => {
-        console.log(error);
-        setisError(true);
-      });
+      .then((result) => {
+        dispatchStories({
+          type: 'STORIES_FETCH_SUCCESS',
+          payload: result.data.stories,
+        });
+      })
+      .catch(() =>
+        dispatchStories({ type: 'STORIES_FETCH_FAILURE' })
+      );
   }, [])
 
   const handleRemoveStory: TonRemoveItem = (item: Story) => {
@@ -85,6 +90,10 @@ function App() {
     setsearchText(event.target.value)
   }
 
+  const searchedStories = stories.data.filter((story) =>
+    story.title.toLowerCase().includes(searchText.toLowerCase())
+  );
+
   return (
     <>
       <CustomInput id="searchField" type="text" value={searchText} isFocused={true} changeSearchState={changeSearchState}>
@@ -93,8 +102,8 @@ function App() {
       <p>
         <strong>Search Field value is: {searchText}</strong>
       </p>
-      {isError && <p>Some Data Loading Error...</p>}
-      {isLoading ? 'Is Loading...' : <StoriesList stories={stories} onRemoveItem={handleRemoveStory} />}
+      {stories.isError && <p>Some Data Loading Error...</p>}
+      {stories.isLoading ? 'Is Loading...' : <StoriesList stories={searchedStories} onRemoveItem={handleRemoveStory} />}
     </>
   )
 }
