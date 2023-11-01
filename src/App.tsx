@@ -1,9 +1,10 @@
-import { useEffect, ChangeEvent, useReducer, useCallback, useState } from 'react'
+import { useEffect, ChangeEvent, useReducer, useCallback, useState, FormEvent } from 'react'
+import axios from 'axios'
 import './App.css'
 import { useSearchField } from './customHooks/useSearchField';
-import CustomInput from './components/CustomInput';
 import StoriesList from './components/StoriesList';
 import { storiesReducer } from './reducers/storiesReducer';
+import SearchForm from './components/SearchForm';
 
 const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
 
@@ -40,19 +41,21 @@ function App() {
     `${API_ENDPOINT}${searchText}`
   );
 
-  const handleFetchStories = useCallback(() => {
-    // if (!searchText) return;
+  const handleFetchStories = useCallback(async () => {
 
     dispatchStories({ type: 'STORIES_FETCH_INIT' });
 
-    fetch(url)
-      .then((response) => response.json())
-      .then((result) => {
-        dispatchStories({
-          type: 'STORIES_FETCH_SUCCESS',
-          payload: result.hits,
-        })
-      });
+    try {
+      const result = await axios.get(url);
+
+      dispatchStories({
+        type: 'STORIES_FETCH_SUCCESS',
+        payload: result.data.hits,
+      })
+    } catch (error) {
+      dispatchStories({ type: 'STORIES_FETCH_FAILURE' });
+    }
+
   }, [url])
 
   useEffect(() => {
@@ -70,20 +73,17 @@ function App() {
   const handleSearchInput = (event: ChangeEvent<HTMLInputElement>) => {
     setsearchText(event.target.value);
   };
-  
-  const handleSearchSubmit = () => {
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     setUrl(`${API_ENDPOINT}${searchText}`);
+
+    event.preventDefault();
   };
-
-
 
 
   return (
     <>
-      <CustomInput id="searchField" type="text" value={searchText} isFocused={true} changeSearchState={handleSearchInput}>
-        <strong>Type something:</strong>
-      </CustomInput>
-      <button type="button" disabled={!searchText} onClick={handleSearchSubmit}>Submit</button>
+      <SearchForm searchText={searchText} handleSearchInput={handleSearchInput} handleSearchSubmit={handleSearchSubmit} />
       <p>
         <strong>Search Field value is: {searchText}</strong>
       </p>
